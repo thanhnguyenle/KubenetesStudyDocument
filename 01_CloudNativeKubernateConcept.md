@@ -1,3 +1,31 @@
+
+## Table of Contents
+- [What is Cloud Native?](#what-is-cloud-native-)
+  - [Cloud Native Computing Foundation (CNCF)](#cloud-native-computing-foundation-cncf)
+- [Kubernetes (K8S)](#kubernetes-k8s)
+  - [What is Kubernetes?](#what-is-kubernetes)
+  - [Key Advantage Over Docker](#key-advantage-over-docker)
+  - [Pods - The Unique Component](#pods---the-unique-component)
+- [Kubernetes Components Overview](#kubernetes-components-overview)
+  - [Core Organizational Structure](#core-organizational-structure)
+  - [Application Components](#application-components)
+  - [Control Plane Components (The Brain)](#control-plane-components-the-brain)
+  - [Node Components (The Workers)](#node-components-the-workers)
+  - [Configuration & Data Management](#configuration--data-management)
+  - [Workload Management](#workload-management)
+  - [Security & Networking](#security--networking)
+- [Manifest Files in Kubernetes](#manifest-files-in-kubernetes)
+  - [What "Manifest" Means](#what-manifest-means)
+  - [Types of Manifest Files](#types-of-manifest-files)
+  - [File Formats](#file-formats)
+  - [Multiple Components in One File](#multiple-components-in-one-file)
+  - [How to Use Manifest Files](#how-to-use-manifest-files)
+- [Kubernetes Architecture: Control Plane vs Worker Nodes](#kubernetes-architecture-control-plane-vs-worker-nodes)
+  - [Control Plane](#control-plane-master-node)
+  - [Worker Nodes](#worker-nodes)
+  - [How They Work Together](#how-they-work-together)
+- [Pod](#pods)
+
 # What is Cloud Native ?
 
  **Key:** portable, modular, and isolated across different cloud environments and providers
@@ -6,7 +34,7 @@
 - **Cloud-Native:** Architecture-agnostic applications that can run on any cloud platform
 - **Cloud-First:** Applications built specifically for a particular CSP's services (though CSPs often market this as "cloud-native")
 
-# Cloud Native Computing Foundation (CNCF)
+## Cloud Native Computing Foundation (CNCF)
 The Cloud Native Computing Foundation is a **Linux Foundation project** launched in 2015 with the original mission to advance container technology
 
 
@@ -57,7 +85,7 @@ Pods allow tightly coupled containers to run together as a single unit while sti
 - **Control Plane Node**: Manages the cluster
 - **Worker Node**: Runs your applications
 
-![alt text](media/image.png)
+![alt text](media/cluster_architecture.png)
 
 Everything flows through the API Server (the central switchboard).
 
@@ -218,3 +246,77 @@ kubectl apply -f my-manifest.yaml
 ```
 
 This command reads the manifest and creates/updates all the components defined in it.
+
+# Kubernetes Architecture: Control Plane vs Worker Nodes
+
+Kubernetes uses a **master-worker architecture** where the control plane manages the cluster while worker nodes run your actual applications.
+
+---
+
+## Control Plane (Master Node)
+
+Think of this as the "brain" of your cluster. It makes all the decisions about what runs where and monitors the cluster's health.
+
+### Key Components:
+
+**API Server**
+The central hub for all communication in Kubernetes. Everything—kubectl commands, internal components, external tools—talks to the cluster through this API. It's like the receptionist that routes all requests.
+
+**Scheduler**
+Watches for newly created pods that don't have a node assigned yet, then decides which worker node should run them. It considers factors like resource requirements, hardware constraints, and workload distribution.
+
+**Controller Manager**
+Runs various controllers that constantly watch the cluster state and make corrections when needed. For example, if a pod crashes, the Replication Controller notices and creates a replacement to maintain your desired state.
+
+**etcd**
+A distributed key-value database that stores all cluster data—configuration, state, metadata. It's the single source of truth. If etcd goes down, the cluster loses its memory of what it's supposed to be doing.
+
+**Cloud Control Manager** (optional)
+Provides integration with cloud providers (AWS, Azure, GCP) for things like load balancers, storage volumes, and routing. This allows Kubernetes to leverage cloud-specific features.
+
+---
+
+## Worker Nodes
+
+These are the machines that actually run your containerized applications. Each worker node can host multiple pods.
+
+### Key Components:
+
+**Kubelet**
+An agent running on each worker node that communicates with the control plane. It receives instructions (like "run this pod") and ensures containers are running and healthy. It's the control plane's representative on each worker.
+
+**Kube Proxy**
+Manages network rules on each node, enabling communication between pods and services. It handles networking so pods can talk to each other across different nodes.
+
+**Container Runtime**
+The software that actually runs containers (Docker, containerd, CRI-O). Kubernetes doesn't run containers itself—it relies on this runtime to pull images and execute containers.
+
+**Pods and Containers**
+Pods are the smallest deployable units in Kubernetes—usually wrapping one container (sometimes multiple tightly-coupled containers). Your application code runs inside these containers.
+
+---
+
+## How They Work Together
+
+1. You submit a deployment via `kubectl` → hits the **API Server**
+2. **Scheduler** picks a suitable worker node
+3. **API Server** tells that node's **Kubelet** to start the pod
+4. **Kubelet** uses the **Container Runtime** to pull images and start containers
+5. **Controller Manager** continuously monitors and maintains desired state
+6. All state changes are stored in **etcd**
+7. **Kube Proxy** sets up networking so the pod can communicate
+
+The control plane makes decisions; worker nodes execute them. This separation allows Kubernetes to scale efficiently and maintain resilience.
+
+# Pods
+- **Smallest unit** in Kubernetes (not containers)
+- **One app per pod** (multiple containers only if tightly coupled)
+- **Each pod = one IP address** (containers share localhost on different ports)
+- **Pods share volumes** (all containers access same storage)
+- **Pods are ephemeral** – when they die, replacements get NEW IP addresses
+
+### Key Commands:
+```bash
+kubectl get pod -o wide  # Shows pod IPs and which node they're on
+```
+![alt text](media/pod.png)
