@@ -1,8 +1,8 @@
 
 ## Table of Contents
-- [What is Cloud Native?](#what-is-cloud-native-)
+- [What is Cloud Native ?](#what-is-cloud-native-)
   - [Cloud Native Computing Foundation (CNCF)](#cloud-native-computing-foundation-cncf)
-- [Kubernetes (K8S)](#kubernetes-k8s)
+- [Kubernetes (K8s)](#kubernetes-k8s)
   - [What is Kubernetes?](#what-is-kubernetes)
   - [Key Advantage Over Docker](#key-advantage-over-docker)
   - [Pods - The Unique Component](#pods---the-unique-component)
@@ -11,9 +11,9 @@
   - [Application Components](#application-components)
   - [Control Plane Components (The Brain)](#control-plane-components-the-brain)
   - [Node Components (The Workers)](#node-components-the-workers)
-  - [Configuration & Data Management](#configuration--data-management)
+  - [Configuration \& Data Management](#configuration--data-management)
   - [Workload Management](#workload-management)
-  - [Security & Networking](#security--networking)
+  - [Security \& Networking](#security--networking)
 - [Manifest Files in Kubernetes](#manifest-files-in-kubernetes)
   - [What "Manifest" Means](#what-manifest-means)
   - [Types of Manifest Files](#types-of-manifest-files)
@@ -21,13 +21,33 @@
   - [Multiple Components in One File](#multiple-components-in-one-file)
   - [How to Use Manifest Files](#how-to-use-manifest-files)
 - [Kubernetes Architecture: Control Plane vs Worker Nodes](#kubernetes-architecture-control-plane-vs-worker-nodes)
-  - [Control Plane](#control-plane-master-node)
+  - [Control Plane (Master Node)](#control-plane-master-node)
+    - [Key Components:](#key-components)
   - [Worker Nodes](#worker-nodes)
+    - [Key Components:](#key-components-1)
   - [How They Work Together](#how-they-work-together)
-- [Pod](#pods)
+- [Pods](#pods)
+    - [Key Commands:](#key-commands)
 - [API Server](#api-server)
+  - [Key Points](#key-points)
 - [Deployment](#deployment)
-
+  - [How It Works](#how-it-works)
+    - [The Chain:](#the-chain)
+  - [Key Concepts](#key-concepts)
+    - [Declarative Updates](#declarative-updates)
+    - [Deployment Controller](#deployment-controller)
+  - [What Deployment Manages](#what-deployment-manages)
+- [ReplicaSet](#replicaset)
+  - [Key Concepts](#key-concepts-1)
+    - [Ownership Link](#ownership-link)
+    - [Autoscaling](#autoscaling)
+- [Stateless vs Stateful](#stateless-vs-stateful)
+  - [Stateless Applications (ReplicaSets/Deployments)](#stateless-applications-replicasetsdeployments)
+    - [Characteristics:](#characteristics)
+    - [Load Balancing:](#load-balancing)
+  - [Stateful Applications (StatefulSets)](#stateful-applications-statefulsets)
+    - [Characteristics:](#characteristics-1)
+    - [Routing Considerations:](#routing-considerations)
 # What is Cloud Native ?
 
  **Key:** portable, modular, and isolated across different cloud environments and providers
@@ -410,3 +430,36 @@ A **ReplicaSet** ensures a **specific number of identical Pods** are always runn
 ```
 HPA → adjusts → ReplicaSet → creates/deletes → Pods
 ```
+
+# Stateless vs Stateful
+
+Understanding the difference between stateless and stateful applications is crucial for choosing the right Kubernetes workload type.
+
+## Stateless Applications (ReplicaSets/Deployments)
+
+**Stateless** means each request is independent - the application doesn't need to remember anything about previous interactions.
+
+### Characteristics:
+- **No memory of past requests** - each request is handled in isolation
+- **Interchangeable instances** - any replica can handle any request
+- **Easy to scale** - just add or remove replicas
+- **Simple recovery** - if a pod dies, start a new one anywhere
+
+### Load Balancing:
+Since all instances are identical and don't hold unique state, you can send requests to **any available pod**. A load balancer can distribute traffic randomly or round-robin style.
+
+## Stateful Applications (StatefulSets)
+
+**Stateful** means the application remembers information and maintains state across requests.
+
+### Characteristics:
+- **Remembers previous interactions** - relies on stored state data
+- **Unique pod identities** - each pod has a stable network identity and storage
+- **Ordered deployment/scaling** - pods are created and deleted in a predictable order
+- **Persistent storage** - each pod gets its own persistent volume that survives restarts
+
+### Routing Considerations:
+With stateful apps, you often need **specific routing rules**:
+- **Write operations** must go to the primary/master node
+- **Read operations** can be distributed to replicas
+- **Session affinity** may be needed to route a user to the same pod
