@@ -25,6 +25,8 @@
   - [Worker Nodes](#worker-nodes)
   - [How They Work Together](#how-they-work-together)
 - [Pod](#pods)
+- [API Server](#api-server)
+- [Deployment](#deployment)
 
 # What is Cloud Native ?
 
@@ -320,3 +322,91 @@ The control plane makes decisions; worker nodes execute them. This separation al
 kubectl get pod -o wide  # Shows pod IPs and which node they're on
 ```
 ![alt text](media/pod.png)
+
+# API Server
+
+**The central communication hub** of Kubernetes. Everything talks through it.
+
+## Key Points
+
+1. **Everything goes through API Server** - No exceptions
+   - kubectl commands → API Server
+   - Scheduler → API Server  
+   - Kubelet → API Server
+   - Dashboard → API Server
+
+2. **Three ways to talk to it:**
+   - UI (Dashboard)
+   - API (HTTP requests)
+   - CLI (kubectl)
+
+3. **Can run multiple instances** for high availability
+
+4. **Implementation name:** kube-apiserver
+
+# Deployment
+
+A **Deployment** is a Kubernetes object that manages the **desired state** of your Pods and ReplicaSets declaratively.
+
+## How It Works
+
+```
+Deployment
+    ↓ (creates and manages)
+ReplicaSet
+    ↓ (manages replicas of)
+Pods
+```
+
+### The Chain:
+1. **You create** a Deployment (define desired state)
+2. **Deployment creates** a ReplicaSet
+3. **ReplicaSet creates** multiple Pods (replicas)
+
+---
+
+## Key Concepts
+
+
+![alt text](media/deployment.png)
+
+### Declarative Updates
+- You declare **what you want** (desired state)
+- Deployment Controller makes it happen (actual state → desired state)
+- Changes happen at a **controlled rate** (gradual rollout)
+
+### Deployment Controller
+- **Default:** Built-in Kubernetes controller
+- **Can swap for:** Argo CD, Flux, Jenkins X (GitOps tools)
+
+---
+
+## What Deployment Manages
+
+- **Desired state** of Pods and ReplicaSets  
+- **Scaling** (increase/decrease replicas)  
+- **Rolling updates** (update app versions gradually)  
+- **Rollbacks** (revert to previous version)  
+- **Self-healing** (restart failed pods)
+
+# ReplicaSet
+
+A **ReplicaSet** ensures a **specific number of identical Pods** are always running to guarantee availability.
+
+![alt text](media/replicaset.png)
+
+## Key Concepts
+
+### Ownership Link
+- Pods are linked to their ReplicaSet via `metadata.ownerReferences`
+- This tells Kubernetes: "This Pod belongs to this ReplicaSet"
+
+### Autoscaling
+
+**Horizontal Pod Autoscaler (HPA)** can automatically scale ReplicaSets:
+- Increases replicas when CPU/memory usage is high
+- Decreases replicas when load is low
+
+```
+HPA → adjusts → ReplicaSet → creates/deletes → Pods
+```
