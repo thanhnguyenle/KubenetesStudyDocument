@@ -48,6 +48,15 @@
   - [Stateful Applications (StatefulSets)](#stateful-applications-statefulsets)
     - [Characteristics:](#characteristics-1)
     - [Routing Considerations:](#routing-considerations)
+- [StatefulSets](#statefulsets)
+  - [Key Features](#key-features)
+    - [1. Stable, Predictable Identity](#1-stable-predictable-identity)
+    - [2. Persistent Storage with Sticky Binding](#2-persistent-storage-with-sticky-binding)
+    - [3. Ordered Deployment and Termination](#3-ordered-deployment-and-termination)
+  - [Networking Architecture](#networking-architecture)
+    - [Headless Service (for Writes)](#headless-service-for-writes)
+    - [ClusterIP Service (for Reads)](#clusterip-service-for-reads)
+  - [How It Works - Example Database Scenario](#how-it-works---example-database-scenario)
 # What is Cloud Native ?
 
  **Key:** portable, modular, and isolated across different cloud environments and providers
@@ -463,3 +472,74 @@ With stateful apps, you often need **specific routing rules**:
 - **Write operations** must go to the primary/master node
 - **Read operations** can be distributed to replicas
 - **Session affinity** may be needed to route a user to the same pod
+
+# StatefulSets
+
+**StatefulSets** are designed for applications that need stable identities and persistent storage - essentially when you need to know **which specific pod** you're talking to.
+
+## Key Features
+
+### 1. Stable, Predictable Identity
+Unlike regular Deployments where pods get random names like `web-app-7d8f9c-x92kl`, StatefulSet pods have **predictable names**:
+- `database-0`
+- `database-1`
+- `database-2`
+
+Each pod gets an **ordinal index** (0, 1, 2...) that never changes, even if the pod is rescheduled to a different node.
+
+### 2. Persistent Storage with Sticky Binding
+Each pod gets its **own dedicated Persistent Volume (PV)** through a Persistent Volume Claim (PVC). The critical feature: if `database-1` crashes and gets rescheduled:
+- The new `database-1` pod will reconnect to the **same** PV that the old one used
+- This ensures **data integrity** - no data is lost when pods restart
+- The pod-to-storage relationship is preserved
+
+### 3. Ordered Deployment and Termination
+Pods are managed in a strict sequence:
+- **Startup**: `database-0` → `database-1` → `database-2` (sequential)
+- **Shutdown**: `database-2` → `database-1` → `database-0` (reverse order)
+
+This is crucial for databases where the primary must start first, or distributed systems that need orderly initialization.
+
+## Networking Architecture
+
+![alt text](media/statefulset.png)
+
+StatefulSets use **two types of services** to handle different traffic patterns:
+
+### Headless Service (for Writes)
+A **Headless Service** has `ClusterIP: None` - meaning:
+- **No load balancing** - doesn't distribute traffic randomly
+- **No single IP address** - doesn't provide a virtual IP
+- **DNS-based pod addressing** - assigns a unique DNS record to each pod
+
+**DNS Format**: `<pod-name>.<headless-service-name>.<namespace>.svc.cluster.local`
+
+Example: `database-0.db-headless.default.svc.cluster.local`
+
+**Use Case**: Write operations can be directed to the **primary pod** (usually `database-0`) by its specific DNS hostname. This ensures all writes go to the master database.
+
+### ClusterIP Service (for Reads)
+A regular service that provides:
+- **Load balancing** across all pods
+- **Single virtual IP address**
+- **Round-robin distribution**
+
+**Use Case**: Read operations can be distributed to **any available replica** for load distribution.
+
+## How It Works - Example Database Scenario
+
+```
+Client Write Request
+    ↓
+DNS: database-0.db-headless.default.svc.cluster.local
+    ↓
+Primary Pod (database-0) ← PV-0
+
+Client Read Request
+    ↓
+ClusterIP Service (db-read)
+    ↓ (load balanced)
+database-0, database-1, database-2
+    ↓
+PV-0, PV-1, PV-2
+```
