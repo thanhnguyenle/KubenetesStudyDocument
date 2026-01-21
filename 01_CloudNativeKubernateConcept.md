@@ -57,6 +57,17 @@
     - [Headless Service (for Writes)](#headless-service-for-writes)
     - [ClusterIP Service (for Reads)](#clusterip-service-for-reads)
   - [How It Works - Example Database Scenario](#how-it-works---example-database-scenario)
+- [Namespaces](#namespaces)
+- [Endpoints and Endpoint Slices](#endpoints-and-endpoint-slices)
+  - [Endpoints](#endpoints)
+    - [How they work:](#how-they-work)
+    - [Example:](#example)
+  - [Why Endpoints Matter](#why-endpoints-matter)
+  - [Endpoint Slices](#endpoint-slices)
+    - [The Problem with Endpoints:](#the-problem-with-endpoints)
+    - [How Endpoint Slices Solve This:](#how-endpoint-slices-solve-this)
+
+
 # What is Cloud Native ?
 
  **Key:** portable, modular, and isolated across different cloud environments and providers
@@ -551,10 +562,10 @@ PV-0, PV-1, PV-2
 - Help organize resources by project, department, or any grouping
 
 **4 Default Namespaces:**
-- `default` - Your resources go here unless specified otherwise
-- `kube-public` - Publicly visible resources
-- `kube-system` - Kubernetes system objects
-- `kube-node-lease` - Tracks node health/failures
+- `default` - Your resources go here unless specified otherwise (can modify)
+- `kube-public` - Publicly visible resources (rarely modify)
+- `kube-system` - Kubernetes system objects (NEVER modify)
+- `kube-node-lease` - Tracks node health/failures (NEVER modify)
 
 **Essential Commands:**
 - View: `kubectl get namespace`
@@ -571,3 +582,99 @@ PV-0, PV-1, PV-2
 - Resources default to the "default" namespace if none is specified
 - Cross-namespace communication requires explicit configuration (network policies/DNS)
 - Use namespaces to enforce security policies and resource quotas (CPU, memory, storage limits)
+
+# Endpoints and Endpoint Slices
+
+## Endpoints
+
+![alt text](media/endpoint.png)
+
+**Endpoints** are Kubernetes objects that maintain a list of IP addresses for pods that back a Service.
+
+### How they work:
+- When you create a Service with a **selector**, Kubernetes automatically creates a corresponding Endpoints object
+```yaml
+# Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-web-service
+spec:
+# selector tag here
+  selector:
+    app: frontend
+    tier: web
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+```
+
+- The Endpoints controller continuously watches for pods whose labels match the Service's selector
+- When matching pods are found, their **IP addresses and ports** are added to the Endpoints object
+```yaml
+# Pod
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-pod-1
+  labels:
+    app: frontend  # Matches!
+    tier: web      # Matches!
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+```
+- If pods are deleted or their labels change, they're removed from the Endpoints list
+
+### Example:
+```bash
+# View endpoints
+kubectl get endpoints
+
+# Detailed view
+kubectl describe endpoints my-service
+```
+
+If you have a Service called `my-web-service` with selector `app=frontend`, and three pods match that label, the Endpoints object will contain all three pod IPs.
+
+## Why Endpoints Matter
+
+Endpoints are the **bridge** between Services (which have stable names/IPs) and Pods (which have ephemeral IPs). When traffic hits a Service, it's actually routed to one of the pod IPs listed in the Endpoints.
+
+## Endpoint Slices
+
+**Endpoint Slices** are a more scalable alternative to Endpoints, introduced to solve performance issues at scale.
+
+### The Problem with Endpoints:
+- In large clusters with services backed by hundreds or thousands of pods, the Endpoints object becomes massive
+- Any pod change requires updating and transmitting the **entire** Endpoints object across the cluster
+- This creates significant network and processing overhead
+
+### How Endpoint Slices Solve This:
+- Split endpoints into **smaller chunks** (slices)
+- Each slice contains up to **100 endpoints** by default
+- When a pod changes, only the affected slice needs updating, not the entire list
+- More efficient for large-scale deployments
+
+```yaml
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: my-web-service-slice
+  labels:
+    kubernetes.io/service-name: my-web-service
+addressType: IPv4
+ports:
+  - port: 8080
+    protocol: TCP
+endpoints:
+  - addresses: ["10.1.1.1"]
+    conditions: {ready: true}
+  - addresses: ["10.1.1.2"]
+    conditions: {ready: true}
+  # ... up to 100 endpoints
+```
