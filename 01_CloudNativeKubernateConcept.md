@@ -543,3 +543,31 @@ database-0, database-1, database-2
     ↓
 PV-0, PV-1, PV-2
 ```
+
+# Namespaces
+
+**What Namespaces Are:**
+- Logical isolation of resources within a cluster
+- Help organize resources by project, department, or any grouping
+
+**4 Default Namespaces:**
+- `default` - Your resources go here unless specified otherwise
+- `kube-public` - Publicly visible resources
+- `kube-system` - Kubernetes system objects
+- `kube-node-lease` - Tracks node health/failures
+
+**Essential Commands:**
+- View: `kubectl get namespace`
+- Create: `kubectl create namespace <name>`
+- Delete: `kubectl delete namespace <name>`
+- Set default: `kubectl config set-context --current --namespace=<name>`
+
+**Scoping Rules:**
+- **Namespaced objects** (stay within one namespace): Pods, Services, Deployments, ConfigMaps, Secrets
+- **Cluster-wide objects** (not namespace-bound): Nodes, StorageClass, PersistentVolumes
+
+**Important Concepts:**
+- Resource names must be unique within a namespace, but can duplicate across different namespaces
+- Resources default to the "default" namespace if none is specified
+- Cross-namespace communication requires explicit configuration (network policies/DNS)
+- Use namespaces to enforce security policies and resource quotas (CPU, memory, storage limits)
