@@ -678,3 +678,139 @@ endpoints:
     conditions: {ready: true}
   # ... up to 100 endpoints
 ```
+---
+# Jobs and CronJobs
+
+## Jobs
+
+A **Job** is a Kubernetes resource that runs a task to completion, then stops. Unlike Deployments or ReplicaSets (which keep pods running continuously), Jobs are designed for **one-time tasks**.
+
+### Common Use Cases:
+
+- Database backups
+- Batch processing (image processing, video encoding)
+- Data migrations
+- Report generation
+- One-time maintenance tasks
+
+### Example:
+
+```bash
+kubectl create job hello --image=busybox -- echo "Hello World"
+```
+
+This creates a Job that:
+1. Spins up a pod using the `busybox` image
+2. Runs the command `echo "Hello World"`
+3. Pod terminates after the command completes
+4. Job is marked as complete
+
+### YAML Example:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: database-backup
+spec:
+  template:
+    spec:
+      containers:
+      - name: backup
+        image: postgres:latest
+        command: ["pg_dump", "-h", "db-host", "mydb"]
+      restartPolicy: OnFailure  # Retry on failure
+```
+
+---
+
+## CronJobs
+
+A **CronJob** is a Job that runs on a **repeating schedule** - like the Unix `cron` utility.
+
+### Key Characteristics:
+
+- **Scheduled execution** - Runs at specific times/intervals
+- **Creates Jobs automatically** - Each schedule trigger creates a new Job
+- **Uses cron syntax** - Familiar time-based scheduling format
+
+### Cron Schedule Format:
+
+```
+* * * * *
+│ │ │ │ │
+│ │ │ │ └─── Day of week (0-6, Sunday=0)
+│ │ │ └───── Month (1-12)
+│ │ └─────── Day of month (1-31)
+│ └───────── Hour (0-23)
+└─────────── Minute (0-59)
+```
+
+### Common Use Cases:
+
+- **Periodic backups** - "Back up database every night at 2am"
+- **Cleanup tasks** - "Delete unconfirmed users every hour"
+- **Report generation** - "Generate sales report every Monday"
+- **Health checks** - "Verify system integrity every 15 minutes"
+- **Data synchronization** - "Sync external data every 6 hours"
+
+### Example:
+
+```bash
+kubectl create cronjob hello --image=busybox --schedule="*/1 * * * *" -- echo "Hello World"
+```
+
+This creates a CronJob that:
+- Runs **every minute** (`*/1 * * * *`)
+- Creates a new Job each minute
+- Each Job runs `echo "Hello World"` in a busybox container
+
+### Schedule Examples:
+
+```bash
+# Every 5 minutes
+"*/5 * * * *"
+
+# Every day at midnight
+"0 0 * * *"
+
+# Every Monday at 9am
+"0 9 * * 1"
+
+# Every hour
+"0 * * * *"
+
+# First day of every month at 3am
+"0 3 1 * *"
+```
+
+### YAML Example:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-unconfirmed-users
+spec:
+  schedule: "0 2 * * *"  # Every day at 2am
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cleanup
+            image: my-app:latest
+            command: ["python", "cleanup.py"]
+          restartPolicy: OnFailure
+```
+
+---
+
+## Key Differences
+
+| Feature | Job | CronJob |
+|---------|-----|---------|
+| **Runs** | Once (on demand) | On a schedule (repeatedly) |
+| **When** | When you create it | At scheduled intervals |
+| **Use for** | One-time tasks | Recurring tasks |
+| **Creates** | Pods directly | Jobs (which create Pods) |
