@@ -66,7 +66,19 @@
   - [Endpoint Slices](#endpoint-slices)
     - [The Problem with Endpoints:](#the-problem-with-endpoints)
     - [How Endpoint Slices Solve This:](#how-endpoint-slices-solve-this)
-
+- [Jobs and CronJobs](#jobs-and-cronjobs)
+  - [Jobs](#jobs)
+    - [Common Use Cases:](#common-use-cases)
+    - [Example:](#example-1)
+    - [YAML Example:](#yaml-example)
+  - [CronJobs](#cronjobs)
+    - [Key Characteristics:](#key-characteristics)
+    - [Cron Schedule Format:](#cron-schedule-format)
+    - [Common Use Cases:](#common-use-cases-1)
+    - [Example:](#example-2)
+    - [Schedule Examples:](#schedule-examples)
+    - [YAML Example:](#yaml-example-1)
+  - [Key Differences](#key-differences)
 
 # What is Cloud Native ?
 
